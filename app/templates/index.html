@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline Document Intelligence Studio</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>Offline Document Intelligence Studio</h1>
+      <p>
+        OCR, local LLM chat, summarization, extraction, prediction, and RAG
+        powered by FastAPI and local AI models.
+      </p>
+    </header>
+
+    {% if cloud_demo_mode %}
+    <div class="card" style="margin-bottom: 20px; border-color: #f59e0b;">
+      <h2>Cloud Demo Mode</h2>
+      <p class="sub">
+        This hosted demo includes OCR, prediction, and document upload.
+        Local LLM-based features are available in the offline local package.
+      </p>
+    </div>
+    {% endif %}
+
+    <div class="grid">
+      <!-- OCR -->
+      <section class="card">
+        <h2>OCR</h2>
+        <p class="sub">Upload an image or PDF and extract text.</p>
+
+        <label>File</label>
+        <input type="file" id="ocrFile" />
+
+        <label>Language</label>
+        <select id="ocrLanguage">
+          <option value="eng">English</option>
+          <option value="ara">Arabic</option>
+          <option value="eng+ara">English + Arabic</option>
+        </select>
+
+        <label>Preprocessing Steps</label>
+        <input type="text" id="ocrSteps" value="Grayscale,Resize" />
+
+        <button onclick="runOCR()">Extract Text</button>
+
+        <div class="result-box">
+          <h3>OCR Result</h3>
+          <pre id="ocrResult">No result yet.</pre>
+        </div>
+      </section>
+
+      {% if not cloud_demo_mode %}
+      <!-- LLM Chat -->
+      <section class="card">
+        <h2>LLM Chat</h2>
+        <p class="sub">Chat with a local Ollama model.</p>
+
+        <label>Message</label>
+        <textarea id="chatMessage" rows="6" placeholder="Ask anything..."></textarea>
+
+        <label>Model</label>
+        <input type="text" id="chatModel" value="llama3.2:latest" />
+
+        <button onclick="runChat()">Send Message</button>
+
+        <div class="result-box">
+          <h3>Chat Response</h3>
+          <pre id="chatResult">No response yet.</pre>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if not cloud_demo_mode %}
+      <!-- Summarize -->
+      <section class="card">
+        <h2>Summarization</h2>
+        <p class="sub">Summarize long text using the local model.</p>
+
+        <label>Text</label>
+        <textarea id="summarizeText" rows="8" placeholder="Paste text to summarize..."></textarea>
+
+        <label>Model</label>
+        <input type="text" id="summarizeModel" value="llama3.2:latest" />
+
+        <button onclick="runSummarize()">Summarize</button>
+
+        <div class="result-box">
+          <h3>Summary</h3>
+          <pre id="summarizeResult">No summary yet.</pre>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if not cloud_demo_mode %}
+      <!-- Extract -->
+      <section class="card">
+        <h2>Information Extraction</h2>
+        <p class="sub">Extract structured fields like name, email, phone, and skills.</p>
+
+        <label>Text</label>
+        <textarea id="extractText" rows="8" placeholder="Paste raw text for extraction..."></textarea>
+
+        <label>Model</label>
+        <input type="text" id="extractModel" value="llama3.2:latest" />
+
+        <button onclick="runExtract()">Extract</button>
+
+        <div class="result-box">
+          <h3>Extracted Data</h3>
+          <pre id="extractResult">No extracted data yet.</pre>
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- Predict -->
+      <section class="card">
+        <h2>Prediction</h2>
+        <p class="sub">Run the trained ML model using four numeric features.</p>
+
+        <label>Features (comma separated)</label>
+        <input type="text" id="predictFeatures" value="5.1,3.5,1.4,0.2" />
+
+        <button onclick="runPredict()">Predict</button>
+
+        <div class="result-box">
+          <h3>Prediction Result</h3>
+          <pre id="predictResult">No prediction yet.</pre>
+        </div>
+      </section>
+
+      <!-- RAG Upload -->
+      <section class="card">
+        <h2>RAG Upload</h2>
+        <p class="sub">Upload a document to build the retrieval index.</p>
+
+        <label>Document File</label>
+        <input type="file" id="ragFile" />
+
+        <button onclick="uploadRAG()">Upload & Index</button>
+
+        <div class="result-box">
+          <h3>Upload Status</h3>
+          <pre id="ragUploadResult">No upload yet.</pre>
+        </div>
+      </section>
+
+      {% if not cloud_demo_mode %}
+      <!-- RAG Ask -->
+      <section class="card full-width">
+        <h2>Ask Your Documents</h2>
+        <p class="sub">Ask a question and get an answer based on indexed documents.</p>
+
+        <label>Question</label>
+        <input type="text" id="ragQuestion" placeholder="What is the main goal of the course?" />
+
+        <label>Model</label>
+        <input type="text" id="ragModel" value="llama3.2:latest" />
+
+        <label>Top K</label>
+        <input type="number" id="ragTopK" value="3" min="1" max="10" />
+
+        <button onclick="askRAG()">Ask</button>
+
+        <div class="result-box">
+          <h3>Answer</h3>
+          <pre id="ragAnswer">No answer yet.</pre>
+        </div>
+
+        <div class="result-box">
+          <h3>Retrieved Chunks</h3>
+          <pre id="ragChunks">No chunks yet.</pre>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    async function runOCR() {
+      const fileInput = document.getElementById("ocrFile");
+      const language = document.getElementById("ocrLanguage").value;
+      const steps = document.getElementById("ocrSteps").value;
+      const resultBox = document.getElementById("ocrResult");
+
+      if (!fileInput.files.length) {
+        resultBox.textContent = "Please choose a file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("language", language);
+      formData.append("preprocessing_steps", steps);
+
+      resultBox.textContent = "Processing OCR...";
+
+      try {
+        const response = await fetch("/ocr/", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultBox.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        resultBox.textContent = data.extracted_text || "No text extracted.";
+      } catch (error) {
+        resultBox.textContent = "OCR request failed: " + error.message;
+      }
+    }
+
+    async function runChat() {
+      const message = document.getElementById("chatMessage").value;
+      const model = document.getElementById("chatModel").value;
+      const resultBox = document.getElementById("chatResult");
+
+      if (!message.trim()) {
+        resultBox.textContent = "Please enter a message.";
+        return;
+      }
+
+      resultBox.textContent = "Thinking...";
+
+      try {
+        const response = await fetch("/chat/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: message,
+            model: model
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultBox.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        resultBox.textContent = data.response || "No response returned.";
+      } catch (error) {
+        resultBox.textContent = "Chat request failed: " + error.message;
+      }
+    }
+
+    async function runSummarize() {
+      const text = document.getElementById("summarizeText").value;
+      const model = document.getElementById("summarizeModel").value;
+      const resultBox = document.getElementById("summarizeResult");
+
+      if (!text.trim()) {
+        resultBox.textContent = "Please enter text first.";
+        return;
+      }
+
+      resultBox.textContent = "Summarizing...";
+
+      try {
+        const response = await fetch("/summarize/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            model: model
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultBox.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        resultBox.textContent = data.summary || "No summary returned.";
+      } catch (error) {
+        resultBox.textContent = "Summarization failed: " + error.message;
+      }
+    }
+
+    async function runExtract() {
+      const text = document.getElementById("extractText").value;
+      const model = document.getElementById("extractModel").value;
+      const resultBox = document.getElementById("extractResult");
+
+      if (!text.trim()) {
+        resultBox.textContent = "Please enter text first.";
+        return;
+      }
+
+      resultBox.textContent = "Extracting...";
+
+      try {
+        const response = await fetch("/extract/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            model: model
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultBox.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        resultBox.textContent = JSON.stringify(data.extracted_data || {}, null, 2);
+      } catch (error) {
+        resultBox.textContent = "Extraction failed: " + error.message;
+      }
+    }
+
+    async function runPredict() {
+      const featuresInput = document.getElementById("predictFeatures").value;
+      const resultBox = document.getElementById("predictResult");
+
+      try {
+        const features = featuresInput
+          .split(",")
+          .map(item => parseFloat(item.trim()))
+          .filter(item => !Number.isNaN(item));
+
+        if (features.length !== 4) {
+          resultBox.textContent = "Please enter exactly 4 numeric features separated by commas.";
+          return;
+        }
+
+        resultBox.textContent = "Predicting...";
+
+        const response = await fetch("/predict/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            features: features
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultBox.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        resultBox.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultBox.textContent = "Prediction failed: " + error.message;
+      }
+    }
+
+    async function uploadRAG() {
+      const fileInput = document.getElementById("ragFile");
+      const resultBox = document.getElementById("ragUploadResult");
+
+      if (!fileInput.files.length) {
+        resultBox.textContent = "Please choose a document first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      resultBox.textContent = "Uploading and indexing...";
+
+      try {
+        const response = await fetch("/rag/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        resultBox.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultBox.textContent = "Upload failed: " + error.message;
+      }
+    }
+
+    async function askRAG() {
+      const question = document.getElementById("ragQuestion").value;
+      const model = document.getElementById("ragModel").value;
+      const topK = parseInt(document.getElementById("ragTopK").value, 10);
+
+      const answerBox = document.getElementById("ragAnswer");
+      const chunksBox = document.getElementById("ragChunks");
+
+      if (!question.trim()) {
+        answerBox.textContent = "Please enter a question.";
+        return;
+      }
+
+      answerBox.textContent = "Thinking...";
+      chunksBox.textContent = "Retrieving...";
+
+      try {
+        const response = await fetch("/rag/ask", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            question: question,
+            top_k: topK,
+            model: model
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          answerBox.textContent = JSON.stringify(data, null, 2);
+          chunksBox.textContent = "No chunks.";
+          return;
+        }
+
+        answerBox.textContent = data.answer || "No answer returned.";
+        chunksBox.textContent = JSON.stringify(data.retrieved_chunks || [], null, 2);
+      } catch (error) {
+        answerBox.textContent = "RAG request failed: " + error.message;
+        chunksBox.textContent = "No chunks.";
+      }
+    }
+  </script>
+</body>
+</html>

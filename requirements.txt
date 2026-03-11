@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+jinja2
+requests
+pydantic
+pillow
+numpy
+opencv-python
+pytesseract
+pdf2image
+scikit-learn
+joblib
