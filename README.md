@@ -99,7 +99,7 @@ Chat with a **local LLM model** using **Ollama**.
 
 Example models:
 - phi3
-- llama3
+- llama3.2
 - mistral
 
 Example use cases:
@@ -189,7 +189,6 @@ Mohammad_API/
 │   │   ├── summarize.py
 │   │   ├── extract.py
 │   │   ├── predict.py
-│   │   ├── retrieve.py
 │   │   └── rag.py
 │   ├── services/
 │   │   ├── ocr_service.py
@@ -197,7 +196,6 @@ Mohammad_API/
 │   │   ├── summary_service.py
 │   │   ├── extraction_service.py
 │   │   ├── prediction_service.py
-│   │   ├── retrieval_service.py
 │   │   └── rag_service.py
 │   ├── ml/
 │   │   ├── train_model.py
