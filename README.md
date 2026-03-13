@@ -100,7 +100,6 @@ Chat with a **local LLM model** using **Ollama**.
 Example models:
 - phi3
 - llama3.2
-- mistral
 
 Example use cases:
 - document questions
