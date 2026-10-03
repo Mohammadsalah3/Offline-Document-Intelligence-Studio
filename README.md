@@ -154,7 +154,7 @@ Upload documents and build a searchable retrieval index.
 Pipeline:
 1. Document upload
 2. Chunking
-3. Embedding generation
+3. TF-IDF generation
 4. Vector storage
 
 ---
@@ -210,7 +210,7 @@ Mohammad_API/
 
 1. Upload document using RAG upload
 2. System chunks the document
-3. Embeddings are generated
+3. TF-IDF are generated
 4. Data is stored in vector index
 5. User asks question
 6. Relevant chunks are retrieved
